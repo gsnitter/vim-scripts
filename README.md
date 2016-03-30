@@ -1,9 +1,12 @@
-Private VIM-Scripte
+Private VIM-Scripts
 ===================
 
 symfonyViewToggler
 ------------------
 
-Definiert sind im normal mode die Mappings <leader>st, <leader>se, <leader>ssp und <leader>ssv, was das twig-Template zu
-einem Controller öffnet. Ist aber noch lange nicht reif, um von anderen benutzt zu werden, unter anderem, weil die
-logischen Template-Namen noch hardcoded mit dem String MEDI arbeiten.
+The a-Register is automatically filled with the path, the git-Folder is in.
+
+Also, in normal  mode, this plugin defines the  mappings <leader>st, <leader>se, <leader>ssp und  <leader>ssv, that open
+the twig-Template corresponding to the controller action, that contains  the cursor. For the time being just meant to be
+used by myself and one  colleague, cause it is poorly implemented and uses the  hard-coded string 'MEDI' for translating
+the logical template names into file pathes.
