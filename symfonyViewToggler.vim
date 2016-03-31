@@ -41,7 +41,11 @@ endfunc
 " und gibt den zugehörigen Pfad zum Template zurück
 func! GetSymfonyPath()
     let startPos = getpos(".")
-    let g:filePath = GetFilePathFromSymfonyString(GetPathUnderCursor())
+
+    let g:filePath = GetFilePathForRepositoryLine()
+    if g:filePath == ''
+        let g:filePath = GetFilePathFromSymfonyString(GetPathUnderCursor())
+    endif
 
     " Wenn der Cursor nicht auf einer Zeile mit einem String wie ..:..:.. war
     if g:filePath == ''
@@ -95,6 +99,14 @@ func! GetSymfonyPath()
     return g:filePath
 endfunc
 
+func! GetFilePathForRepositoryLine()
+    if match(getline("."), "getRepository") >= 0
+        let l:path = GetPathUnderCursor()
+        echo l:path
+        return
+    endif
+endfunc
+
 func! GoToFunctionDefinition()
     call search('^\s*}\s*$')
     call search(' function ', 'b')
@@ -138,6 +150,14 @@ func! GetFilePathFromSymfonyString(str)
             let g:filePath=@a.'src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Resources/views/'.g:parts[1].'/'.g:parts[2]
         endif
     endif
+
+    if len(g:parts) == 2
+        let g:filePath=@a.'src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Repository/'.g:parts[1].'Repository.php'
+        if filereadable(g:filePath) == 0
+            let g:filePath=@a.'src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Entity/'.g:parts[1].'.php'
+        endif
+    endif
+
     return g:filePath
 endfunc
 
