@@ -1,10 +1,21 @@
 nmap <leader>se :call ToggleSymfonyView('edit')<cr>
-nmap <leader>ssp :call ToggleSymfonyView('sp')<cr>
-nmap <leader>svs :call ToggleSymfonyView('vs')<cr>
+nmap <leader>ss :call ToggleSymfonyView('sp')<cr>
+nmap <leader>sv :call ToggleSymfonyView('vs')<cr>
 nmap <leader>st :call ToggleSymfonyView('tabnew')<cr>
+" Wollen noch Service-Namen auflösen, aber erst die tag-Files splitten.
+" Dazu http://vim.wikia.com/wiki/Autocmd_to_update_ctags_file versuchen.
+
+" Sprung von Repository zu Enity,
+" von Controller zu FormType
+" oder von View zu Controller.
+" nmap <leader>sr :call TogglePartnerFiles()<cr>
 
 " Gibt das Directory mit dem .git-Dir zurück, falls es existiert.
 func! GetBaseDir()
+    " if match(expand("%:p"), @a) == 0
+        " return @a
+    " endif
+
     let result=system('git rev-parse --show-toplevel')
     if v:shell_error != ''
         let result=""
@@ -19,7 +30,6 @@ function! Strip(input_string)
     return substitute(a:input_string, '\n\+$', '', '')
 endfunction
 autocmd BufEnter * call GetBaseDir()
-
 
 " se, svs, ssp, st
 func! ToggleSymfonyView(openMode)
@@ -45,6 +55,10 @@ func! GetSymfonyPath()
     let g:filePath = GetFilePathForRepositoryLine()
     if g:filePath == ''
         let g:filePath = GetFilePathFromSymfonyString(GetPathUnderCursor())
+    endif
+
+    if g:filePath == ''
+        let g:filePath = GetSymfonyServiceString(GetServiceDefinitionUnderCursor())
     endif
 
     " Wenn der Cursor nicht auf einer Zeile mit einem String wie ..:..:.. war
@@ -140,6 +154,25 @@ func! GetPathUnderCursor()
     call setpos('.', startPos)
 endfunc
 
+func! GetServiceDefinitionUnderCursor()
+    let startPos = getpos(".")
+    normal 0
+    call search("['\"]")
+    " Wenn es in der Zeile ein einfaches oder doppeltes Anführungszeichen gibt
+    if line(".") == startPos[1]
+        normal lv
+        let stringStartPos = getpos(".")[2]
+        call search("['\"]")
+        if line(".") == startPos[1] && stringStartPos < getpos(".")[2]
+            normal h"zy
+            call setpos('.', startPos)
+            return @z
+        endif
+    endif
+    call setpos('.', startPos)
+    return ''
+endfunc
+
 func! GetFilePathFromSymfonyString(str)
     let g:parts=split('x'.a:str, ':')
     let g:filePath = ''
@@ -160,4 +193,3 @@ func! GetFilePathFromSymfonyString(str)
 
     return g:filePath
 endfunc
-
