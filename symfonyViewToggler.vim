@@ -58,7 +58,8 @@ func! GetSymfonyPath()
     endif
 
     if g:filePath == ''
-        let g:filePath = GetSymfonyServiceString(GetServiceDefinitionUnderCursor())
+        call setpos('.', startPos)
+        let g:filePath = GetServiceDefinitionUnderCursor()
     endif
 
     " Wenn der Cursor nicht auf einer Zeile mit einem String wie ..:..:.. war
@@ -154,11 +155,10 @@ func! GetPathUnderCursor()
     call setpos('.', startPos)
 endfunc
 
-func! GetServiceDefinitionUnderCursor()
+func! GetQuotedString()
     let startPos = getpos(".")
     normal 0
     call search("['\"]")
-    " Wenn es in der Zeile ein einfaches oder doppeltes Anführungszeichen gibt
     if line(".") == startPos[1]
         normal lv
         let stringStartPos = getpos(".")[2]
@@ -169,6 +169,7 @@ func! GetServiceDefinitionUnderCursor()
             return @z
         endif
     endif
+
     call setpos('.', startPos)
     return ''
 endfunc
@@ -192,4 +193,33 @@ func! GetFilePathFromSymfonyString(str)
     endif
 
     return g:filePath
+endfunc
+
+func! GetServiceDefinitionUnderCursor()
+    " Strings mit 'Bundle' oder Leerzeichen sind keine Service-Definitionen
+    let string = GetQuotedString()
+    if match(string, '@Bundle') >= 0 || match(string, ' ') >= 0
+        return ''
+    endif
+
+    " Ein container:debug, aber Antwort ohne Farben. Funktioniert auch für private Services.
+    let command = "php ".@a."app/console container:debug ".string.' | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g"'
+    let logicalPath=system(command)
+    let logicalPath=substitute(logicalPath, '.*Class\s*', '', 'v')
+    let logicalPath=substitute(logicalPath, "\n.*", '', 'v')
+
+    return TranslateLogicalFilePath(logicalPath)
+endfunc
+
+func! TranslateLogicalFilePath(logicalPath)
+    let fileName=substitute(a:logicalPath, '.*\\', '', '')
+    let filePathes=split(system('find ' . @a . ' -name ' . fileName . '*'), "\n")
+    for filePath in filePathes
+        let a = substitute(filePath, '/', '', 'g')
+        let b = substitute(a:logicalPath, '\\', '', 'g')
+        if match(a, b)
+            return filePath
+        endif
+    endfor
+    return ''
 endfunc
