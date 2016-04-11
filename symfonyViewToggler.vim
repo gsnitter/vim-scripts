@@ -223,3 +223,34 @@ func! TranslateLogicalFilePath(logicalPath)
     endfor
     return ''
 endfunc
+
+" G someFunction soll nur in den eigenen PHP-Files suchen
+:command! -nargs=1 G call Grep("<args>")
+func! Grep(search)
+    let command='vimgrep /\c' . a:search . '/j ' . GetBaseDir() . '/src/**/*.php'
+    exec command
+
+    if len(getqflist()) > 1
+        exec 'copen'
+        return
+    elseif len(getqflist()) == 1
+        exec 'cfirst'
+        return
+    endif
+endfunc
+
+:command! -nargs=? SS call ShowServiceDefinition("<args>")
+func! ShowServiceDefinition(openMode)
+    if a:openMode == ''
+        let openMode='e'
+    else
+        let openMode=a:openMode
+    endif
+    let fileNameWithoutEnding = substitute(expand("%"), "\\..*", "", "")
+
+    let path = expand("%:p")
+    let path = substitute(path, "Bundle.*", "Bundle/Resources/config/services.yml", "")
+    call OpenFile(path, openMode)
+
+    call search(fileNameWithoutEnding)
+endfunc
