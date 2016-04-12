@@ -9,34 +9,36 @@
 " --langmap=file:.html.twig.xml.yml
 
 function! DelTagOfFile(file)
-  return
-  let fullpath = a:file
-  let cwd = getcwd()
-  let tagFilePath = GetTagFilePath()
-  let f = substitute(fullpath, cwd . "/", "", "")
-  let f = escape(f, './')
-  let cmd = 'sed -i "/' . f . '/d" "' . tagFilePath . '"'
-  let resp = system(cmd .' &')
+    let tagFilePath = GetTagFilePath()
+    let f = substitute(a:file, GetBaseDir(), "", "")
+    let f = escape(f, './')
+    let cmd = 'sed -i "/' . f . '/d" "' . tagFilePath . '"'
+    let resp = system(cmd)
+    echo cmd
 endfunction
 
 function! GetTagFilePath()
-  let tagFilePath = GetBaseDir() . "/tags"
-  if file_readable(tagFilePath) == 0
-      return ''
-  endif
-  return tagFilePath
+    let tagFilePath = GetBaseDir() . "/tags"
+    if file_readable(tagFilePath) == 0
+        return ''
+    endif
+    return tagFilePath
 endfunc
 
 function! UpdateTags()
-  let tagFilePath = GetTagFilePath()
-  if tagFilePath == ''
-      return
-  endif
-  let f = expand("%:p")
-  call DelTagOfFile(f)
+    let tagFilePath = GetTagFilePath()
+    if tagFilePath == ''
+        return
+    endif
+    let file = expand("%:p")
+    call DelTagOfFile(file)
 
-  let cmd = 'ctags -a -f '.tagFilePath.' "'.f.'" &'
-  call system(cmd)
+    let cmd = 'ctags -a -f '.tagFilePath.' "'.file.'" &'
+    call system(cmd)
 endfunction
-autocmd BufWritePost *.php,*.js,*.twig call UpdateTags()
 
+if exists('g:loaded_sni_ctags')
+    finish
+endif
+let g:loaded_sni_ctags = 1
+autocmd BufWritePost *.php,*.js,*.twig call UpdateTags()
