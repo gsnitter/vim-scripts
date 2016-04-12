@@ -8,13 +8,12 @@
 " --langdef=file
 " --langmap=file:.html.twig.xml.yml
 
-function! DelTagOfFile(file)
+function! GetDelTagOfFileCommand(file)
     let tagFilePath = GetTagFilePath()
     let f = substitute(a:file, GetBaseDir(), "", "")
     let f = escape(f, './')
     let cmd = 'sed -i "/' . f . '/d" "' . tagFilePath . '"'
-    let resp = system(cmd)
-    echo cmd
+    return cmd
 endfunction
 
 function! GetTagFilePath()
@@ -31,9 +30,8 @@ function! UpdateTags()
         return
     endif
     let file = expand("%:p")
-    call DelTagOfFile(file)
 
-    let cmd = 'ctags -a -f '.tagFilePath.' "'.file.'" &'
+    let cmd = GetDelTagOfFileCommand(file) . ' && ctags -a -f '.tagFilePath.' "'.file.'" &'
     call system(cmd)
 endfunction
 
@@ -42,3 +40,4 @@ if exists('g:loaded_sni_ctags')
 endif
 let g:loaded_sni_ctags = 1
 autocmd BufWritePost *.php,*.js,*.twig call UpdateTags()
+
