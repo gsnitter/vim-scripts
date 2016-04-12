@@ -9,6 +9,7 @@
 " --langmap=file:.html.twig.xml.yml
 
 function! DelTagOfFile(file)
+  return
   let fullpath = a:file
   let cwd = getcwd()
   let tagFilePath = GetTagFilePath()

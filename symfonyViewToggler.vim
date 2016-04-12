@@ -12,18 +12,26 @@ nmap <leader>st :call ToggleSymfonyView('tabnew')<cr>
 
 " Gibt das Directory mit dem .git-Dir zurück, falls es existiert.
 func! GetBaseDir()
-    " if match(expand("%:p"), @a) == 0
-        " return @a
-    " endif
+    let dir = getcwd()
+    let baseDir = ''
 
-    let result=system('git rev-parse --show-toplevel')
-    if v:shell_error != ''
-        let result=""
-    else
-        let result=Strip(result)."/"
-    endif
-    let @a=result
-    return result
+    while dir <> ''
+        if isdirectory(dir . '/.git')
+            let baseDir = dir
+        endif
+        let dir = substitute(dir, '/[^/]*$', '', '')
+    endwhile
+
+    return baseDir
+
+    " let result=system('git rev-parse --show-toplevel')
+    " if v:shell_error != ''
+        " let result=""
+    " else
+        " let result=Strip(result)."/"
+    " endif
+    " let @a=result
+    " return result
 endfunc
 function! Strip(input_string)
     " return substitute(a:input_string, '^\s*\(.\{-}\)\s*$', '\1', '')
