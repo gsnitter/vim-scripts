@@ -15,7 +15,7 @@ func! GetBaseDir()
     let dir = getcwd()
     let baseDir = ''
 
-    while dir <> ''
+    while dir != ''
         if isdirectory(dir . '/.git')
             let baseDir = dir
         endif
@@ -23,16 +23,8 @@ func! GetBaseDir()
     endwhile
 
     return baseDir
-
-    " let result=system('git rev-parse --show-toplevel')
-    " if v:shell_error != ''
-        " let result=""
-    " else
-        " let result=Strip(result)."/"
-    " endif
-    " let @a=result
-    " return result
 endfunc
+
 function! Strip(input_string)
     " return substitute(a:input_string, '^\s*\(.\{-}\)\s*$', '\1', '')
     return substitute(a:input_string, '\n\+$', '', '')
