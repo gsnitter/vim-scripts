@@ -224,10 +224,14 @@ func! TranslateLogicalFilePath(logicalPath)
     return ''
 endfunc
 
-" G someFunction soll nur in den eigenen PHP-Files suchen
+" G someFunction soll nur in den eigenen PHP-Files suchen (samt features)
 :command! -nargs=1 G call Grep("<args>")
+:command! -nargs=1 Grep call Grep("<args>")
 func! Grep(search)
+    " grep -r -e 'some pattern' path/* funkttioniert, aber ohne 'Progress'
     let command='vimgrep /\c' . a:search . '/j ' . GetBaseDir() . '/src/**/*.php'
+    exec command
+    let command='vimgrepadd /\c' . a:search . '/j ' . GetBaseDir() . '/src/**/*.feature'
     exec command
 
     if len(getqflist()) > 1
