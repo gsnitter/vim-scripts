@@ -2,6 +2,11 @@ nmap <leader>se :call ToggleSymfonyView('edit')<cr>
 nmap <leader>ss :call ToggleSymfonyView('sp')<cr>
 nmap <leader>sv :call ToggleSymfonyView('vs')<cr>
 nmap <leader>st :call ToggleSymfonyView('tabnew')<cr>
+
+:command! -nargs=? SS call ShowServiceDefinition("<args>")
+autocmd BufEnter * call GetBaseDir()
+:command! -nargs=1 G call Grep("<args>")
+
 " Wollen noch Service-Namen auflösen, aber erst die tag-Files splitten.
 " Dazu http://vim.wikia.com/wiki/Autocmd_to_update_ctags_file versuchen.
 
@@ -29,7 +34,6 @@ function! Strip(input_string)
     " return substitute(a:input_string, '^\s*\(.\{-}\)\s*$', '\1', '')
     return substitute(a:input_string, '\n\+$', '', '')
 endfunction
-autocmd BufEnter * call GetBaseDir()
 
 " se, svs, ssp, st
 func! ToggleSymfonyView(openMode)
@@ -42,8 +46,19 @@ func! ToggleSymfonyView(openMode)
 endfunc
 
 func! OpenFile(path, openMode)
+    let om = a:openMode
+    if om == 's'
+        let om = 'split'
+    endif
+    if om == 'v'
+        let om = 'vsplit'
+    endif
+    if om == 't'
+        let om = 'tabe'
+    endif
+
     if filereadable(a:path) == 1 || confirm('File '.a:path.' anlegen?', "n\ny") == 2
-        exec(a:openMode.' '.a:path)
+        exec(om . ' ' . a:path)
     endif
 endfunc
 
@@ -225,7 +240,6 @@ func! TranslateLogicalFilePath(logicalPath)
 endfunc
 
 " G someFunction soll nur in den eigenen PHP-Files suchen
-:command! -nargs=1 G call Grep("<args>")
 func! Grep(search)
     let command='vimgrep /\c' . a:search . '/j ' . GetBaseDir() . '/src/**/*.php'
     exec command
@@ -239,14 +253,32 @@ func! Grep(search)
     endif
 endfunc
 
-:command! -nargs=? SS call ShowServiceDefinition("<args>")
+" Die Idee ist, dass wir erst zur Klasse des Services springen,
+" und anschließend zur Service-Definition, was hiermit geschieht:
 func! ShowServiceDefinition(openMode)
     if a:openMode == ''
         let openMode='e'
     else
         let openMode=a:openMode
     endif
-    let fileNameWithoutEnding = substitute(expand("%"), "\\..*", "", "")
+
+    " Macht aus /irgend/ein/pfad/file.php \pfad\file.php
+    let fileNameWithoutEnding = substitute(expand("%:p"), "\\.php$", "", "")
+    let fileNameWithoutEnding = substitute(fileNameWithoutEnding, '.*/\([^/]*/[^/]*/[^/]*\)', '\1', '')
+    let fileNameWithoutEnding = substitute(fileNameWithoutEnding, '/', '\\\\', 'g')
+
+    let command = 'silent! vimgrep /' . fileNameWithoutEnding . '/j ' . GetBaseDir() . '**/*.yml'
+    exec command
+
+    " Wenn wir eine Stelle gefunden haben, springen wir zu ihr
+    if (len(getqflist()) > 0)
+        call OpenFile(expand("%:p"), a:openMode)
+        " let bufnr = getqflist()[0]['bufnr']
+        cfirst
+    else
+        echo "Keine Klasse " . fileNameWithoutEnding . " in einer service.yml gefunden"
+    endif
+    return
 
     let path = expand("%:p")
     let path = substitute(path, "Bundle.*", "Bundle/Resources/config/services.yml", "")
