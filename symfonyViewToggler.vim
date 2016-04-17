@@ -7,6 +7,9 @@ nmap <leader>st :call ToggleSymfonyView('tabnew')<cr>
 autocmd BufEnter * call GetBaseDir()
 :command! -nargs=1 G call Grep("<args>")
 
+" Wir wollen mit go ein preview des Treffers sehen
+autocmd FileType qf :call InitQfList()
+
 " Wollen noch Service-Namen auflösen, aber erst die tag-Files splitten.
 " Dazu http://vim.wikia.com/wiki/Autocmd_to_update_ctags_file versuchen.
 
@@ -285,4 +288,8 @@ func! ShowServiceDefinition(openMode)
     call OpenFile(path, openMode)
 
     call search(fileNameWithoutEnding)
+endfunc
+
+func! InitQfList()
+    nmap <buffer> go <cr>z<cr>:copen<cr>
 endfunc
