@@ -233,6 +233,8 @@ func! Grep(search)
     exec command
     let command='vimgrepadd /\c' . a:search . '/j ' . GetBaseDir() . '/src/**/*.feature'
     exec command
+    let command='vimgrepadd /\c' . a:search . '/j ' . GetBaseDir() . '/src/**/*.yml'
+    exec command
 
     if len(getqflist()) > 1
         exec 'copen'
