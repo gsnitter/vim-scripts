@@ -202,16 +202,16 @@ func! GetFilePathFromSymfonyString(str)
     let g:filePath = ''
     if len(g:parts) == 3
         if g:parts[0] == 'x'
-            let g:filePath=@a.'app/Resources/views/'.g:parts[2]
+            let g:filePath=GetBaseDir().'/app/Resources/views/'.g:parts[2]
         else
-            let g:filePath=@a.'src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Resources/views/'.g:parts[1].'/'.g:parts[2]
+            let g:filePath=GetBaseDir().'/src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Resources/views/'.g:parts[1].'/'.g:parts[2]
         endif
     endif
 
     if len(g:parts) == 2
-        let g:filePath=@a.'src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Repository/'.g:parts[1].'Repository.php'
+        let g:filePath=GetBaseDir().'/src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Repository/'.g:parts[1].'Repository.php'
         if filereadable(g:filePath) == 0
-            let g:filePath=@a.'src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Entity/'.g:parts[1].'.php'
+            let g:filePath=GetBaseDir().'/src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Entity/'.g:parts[1].'.php'
         endif
     endif
 
@@ -226,7 +226,7 @@ func! GetServiceDefinitionUnderCursor()
     endif
 
     " Ein container:debug, aber Antwort ohne Farben. Funktioniert auch für private Services.
-    let command = "php ".@a."app/console container:debug ".string.' | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g"'
+    let command = "php ".GetBaseDir()."/app/console container:debug ".string.' | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g"'
     let logicalPath=system(command)
     let logicalPath=substitute(logicalPath, '.*Class\s*', '', 'v')
     let logicalPath=substitute(logicalPath, "\n.*", '', 'v')
@@ -236,7 +236,8 @@ endfunc
 
 func! TranslateLogicalFilePath(logicalPath)
     let fileName=substitute(a:logicalPath, '.*\\', '', '')
-    let filePathes=split(system('find ' . @a . ' -name ' . fileName . '*'), "\n")
+    let command = 'find ' . GetBaseDir() . ' -name ' . Trim(fileName) . '*'
+    let filePathes=split(system(command), "\n")
     for filePath in filePathes
         let a = substitute(filePath, '/', '', 'g')
         let b = substitute(a:logicalPath, '\\', '', 'g')
@@ -246,6 +247,10 @@ func! TranslateLogicalFilePath(logicalPath)
     endfor
     return ''
 endfunc
+
+function! Trim(input_string)
+    return substitute(a:input_string, '^\s*\(.\{-}\)\s*$', '\1', '')
+endfunction
 
 func! Grep(search)
     " grep -r -e 'some pattern' path/* funkttioniert, aber ohne 'Progress'
