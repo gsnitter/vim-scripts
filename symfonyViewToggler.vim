@@ -1,8 +1,11 @@
 " TODOS:
-"     - Wenn eine service-definition fehlt, sollte SS v zu service.yml des  Bundles springen
 "     - AA sollte TypeHint können, dann 
 "         /** @var SomeClass */
 "         protected $someMember;
+"     - Für Funktionen AF anlegen?
+"       Da wäre fast ein Mapping besser, um zur function-Zeile springt
+"     - GetBaseDir cachen
+"     - Bei dispatch.vim ca. in Zeile 850 'normal G' einfügen
 nmap <leader>se :call ToggleSymfonyView('edit')<cr>
 nmap <leader>ss :call ToggleSymfonyView('sp')<cr>
 nmap <leader>sv :call ToggleSymfonyView('vs')<cr>
@@ -26,6 +29,12 @@ autocmd FileType qf :call InitQfList()
 " Gibt das Directory mit dem .git-Dir zurück, falls es existiert.
 func! GetBaseDir()
     let dir = getcwd()
+
+    " Wenn das baseDirectory noch passt servieren wir den Cache
+    if match(expand('%:p'), @a) > 0
+        return @a
+    endif
+
     let baseDir = ''
 
     while dir != ''
@@ -34,6 +43,7 @@ func! GetBaseDir()
         endif
         let dir = substitute(dir, '/[^/]*$', '', '')
     endwhile
+    let @a=baseDir
 
     return baseDir
 endfunc
@@ -293,9 +303,12 @@ func! ShowServiceDefinition(openMode)
         " let bufnr = getqflist()[0]['bufnr']
         cfirst
     else
-        echo "Keine Klasse " . fileNameWithoutEnding . " in einer service.yml gefunden"
+        let path = substitute(expand("%:p"), "Bundle.*", "Bundle/Resources/config/services.yml", "")
+        if filereadable(path)
+            call OpenFile(path, a:openMode)
+        endif
+        return
     endif
-    return
 
     let path = expand("%:p")
     let path = substitute(path, "Bundle.*", "Bundle/Resources/config/services.yml", "")
