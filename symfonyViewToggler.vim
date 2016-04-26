@@ -320,3 +320,20 @@ endfunc
 func! InitQfList()
     nmap <buffer> go <cr>z<cr>:copen<cr>
 endfunc
+
+autocmd! BufEnter *Test.php call InitTestMapping()
+func! InitTestMapping()
+    if match(expand('%'), 'Test.php')
+        :nmap <buffer> <leader>p :call ExecuteUnitTest()<cr>
+    endif
+endfunc
+
+func! ExecuteUnitTest()
+    let @a=GetBaseDir()
+    let command='Dispatch php '.@a.'/vendor/phpunit/phpunit/phpunit -c '.@a.'/app/phpunit.xml'
+    let command='Dispatch phpunit -c '.@a.'/app/phpunit.xml'
+    let command=command .' --filter ' . substitute(expand('%'), '.php', '', '')
+    "let command='Dispatch phpunit -c /home/steffen/Projekte/mediVerbund/medios/app/phpunit.xml --filter Quartal'
+    exec command
+"normal <c-w>k
+endfunc
