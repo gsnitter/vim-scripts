@@ -25,13 +25,57 @@ nmap <leader>fs :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "
 nmap <leader>fv :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 'v')"<cr>
 nmap <leader>ft :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 't')"<cr>
 
-" Wollen noch Service-Namen auflösen, aber erst die tag-Files splitten.
-" Dazu http://vim.wikia.com/wiki/Autocmd_to_update_ctags_file versuchen.
+func! AddArgToConstructor(args)
+    normal mz
+    let parts = split(a:args)
+    if len(parts) == 2
+        let varName = parts[0]
+        let className = parts[1]
+    else
+        let varName = a:args
+        let className =""
+    endif
+    let varName = substitute(varName, '\$\?', '$', '')
 
-" Sprung von Repository zu Enity,
-" von Controller zu FormType
-" oder von View zu Controller.
-" nmap <leader>sr :call TogglePartnerFiles()<cr>
+    " Erst sehen wir nach, wo die öffnende Klammer von construct ist
+    :normal /__constructf(
+    let posOfOpeningBracket = getpos(".")[2]
+    :normal /constructf)
+    let posOfClosingBracket = getpos(".")[2]
+
+    " Neue Variable in der Klammer hinzufügen
+    if (posOfClosingBracket - posOfOpeningBracket > 2)
+        exec "normal i, "
+        normal l
+    endif
+
+    if className == ""
+        exec "normal i" . varName
+    else
+        exec "normal i" . className . ' ' . varName
+    endif
+
+    " Neue Variable am Ende von Construct einer protected Variablen übergeben
+    exec 'normal /{%O$this->' . varName . ' = ' . varName . ';'
+
+    :normal /__construct
+    :normal ?^\s*$
+
+    normal o
+    if className != ''
+        exec 'normal O/** @var ' . className . ' */'
+        normal j
+    endif
+
+    exec 'normal Oprotected ' . varName . ';'
+    normal mu
+
+    " Damit wir mit <ctrl-o> schnell zur letzten Stelle springen können gehen
+    " wir nochmal an den Anfang, dann zurück
+    normal 'z
+    normal 'u
+endfunc
+
 
 " Gibt das Directory mit dem .git-Dir zurück, falls es existiert.
 func! GetBaseDir()
