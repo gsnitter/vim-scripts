@@ -21,6 +21,9 @@ autocmd FileType qf :call InitQfList()
 " Folgendes am besten nur bei PHP-Files
 nmap <2-LeftMouse> :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 'e')"<cr>
 nmap <leader>fe :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 'e')"<cr>
+nmap <leader>fs :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 's')"<cr>
+nmap <leader>fv :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 'v')"<cr>
+nmap <leader>ft :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 't')"<cr>
 
 " Wollen noch Service-Namen auflösen, aber erst die tag-Files splitten.
 " Dazu http://vim.wikia.com/wiki/Autocmd_to_update_ctags_file versuchen.
@@ -334,43 +337,6 @@ func! ExecuteUnitTest()
 "normal <c-w>k
 endfunc
 
-func! SNIFindFunctionDefinition(funcName, openMode)
-    " Wir holen uns aus dem Tagfile die Pfade von Files mit der Funktion
-    " und (unter anderem) alle use-Pfade oder Type-Hint-Pfade,
-    " genauer alles was wie ..\..\.. aussieht, aber auch z.B.
-    " MEDIVertragBundle\..
-    let pathesWithTag = SNIGetPathesWithTag(a:funcName)
-    let possiblePathes = SNIGetStringsWithBackslash()
-
-    " Wegen z.B. MEDIVertragBundle nehmen wir alle Slashes raus
-    let normalizedPossiblePathes = []
-    for i in range(0, len(possiblePathes) - 1)
-        call add(normalizedPossiblePathes, SNIStripSlashes(possiblePathes[i]))
-    endfor
-
-    " Wir erstellen ein Result mit den Matches
-    let result = []
-    for pathWithTag in pathesWithTag
-        let fullNormalizedPath = SNIStripDotPhp(SNIStripSlashes(pathWithTag))
-        for normalizedPossiblePath in normalizedPossiblePathes
-            if match(fullNormalizedPath, normalizedPossiblePath) != -1 
-                call add(result, pathWithTag)
-            endif
-        endfor
-    endfor
-
-    if len(result) == 1
-        call OpenFile(GetBaseDir() . '/' . result[0], a:openMode)
-        silent call search(a:funcName)
-    endif
-    " TODO SNI
-    " - Wenn schon vor dem Filtern nur eine Fundstelle gefunden wird die nehmen.
-    " - Wird keine gefunden, einfach melden.
-    " - Wenn mehrere gefunden wurden zumindest ein normales :tselect machen,
-    "   obwohl es besser wäre eine Liste anzuzeigen.
-    "   - nmap <buffer> <cr> :call OpenFileInLine()<cr>
-endfunc
-
 func! SNIGetPathesWithTag(tagName)
     let tagPath = SNIGetTagPath()
     if tagPath == ''
@@ -414,4 +380,49 @@ func! SNIGetStringsWithPattern(pattern)
 
     call setpos('.', startPos)
     return hits
+endfunc
+
+func! SNIFindFunctionDefinition(funcName, openMode)
+    " Wir holen uns aus dem Tagfile die Pfade von Files mit der Funktion
+    " und (unter anderem) alle use-Pfade oder Type-Hint-Pfade,
+    " genauer alles was wie ..\..\.. aussieht, aber auch z.B.
+    " MEDIVertragBundle\..
+    let pathesWithTag = SNIGetPathesWithTag(a:funcName)
+
+    if len(pathesWithTag) == 1
+        call OpenFile(GetBaseDir() . '/' . pathesWithTag[0], a:openMode)
+        return
+    endif
+    if len(pathesWithTag) == 0
+        echo "Funktion nicht im Tag-File gefunden"
+        return
+    endif
+
+    let possiblePathes = SNIGetStringsWithBackslash()
+
+    " Wegen z.B. MEDIVertragBundle nehmen wir alle Slashes raus
+    let normalizedPossiblePathes = []
+    for i in range(0, len(possiblePathes) - 1)
+        call add(normalizedPossiblePathes, SNIStripSlashes(possiblePathes[i]))
+    endfor
+
+    " Wir erstellen ein Result mit den Matches
+    let result = []
+    for pathWithTag in pathesWithTag
+        let fullNormalizedPath = SNIStripDotPhp(SNIStripSlashes(pathWithTag))
+        for normalizedPossiblePath in normalizedPossiblePathes
+            if match(fullNormalizedPath, normalizedPossiblePath) != -1 
+                call add(result, pathWithTag)
+            endif
+        endfor
+    endfor
+
+    if len(result) == 1
+        call OpenFile(GetBaseDir() . '/' . result[0], a:openMode)
+        silent call search(a:funcName)
+    else
+        write
+        call OpenFile(expand('%:p'), a:openMode)
+        exec('tselect ' . a:funcName)
+    endif
 endfunc
