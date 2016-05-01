@@ -18,6 +18,10 @@ autocmd BufEnter * call GetBaseDir()
 " Wir wollen mit go ein preview des Treffers sehen
 autocmd FileType qf :call InitQfList()
 
+" Folgendes am besten nur bei PHP-Files
+nmap <2-LeftMouse> :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 'e')"<cr>
+nmap <leader>fe :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 'e')"<cr>
+
 " Wollen noch Service-Namen auflösen, aber erst die tag-Files splitten.
 " Dazu http://vim.wikia.com/wiki/Autocmd_to_update_ctags_file versuchen.
 
@@ -297,24 +301,16 @@ func! ShowServiceDefinition(openMode)
     let command = 'silent! vimgrep /' . fileNameWithoutEnding . '/j ' . GetBaseDir() . '**/*.yml'
     exec command
 
-    " Wenn wir eine Stelle gefunden haben, springen wir zu ihr
     if (len(getqflist()) > 0)
-        call OpenFile(expand("%:p"), a:openMode)
-        " let bufnr = getqflist()[0]['bufnr']
+        " Wenn wir mindestens eine Stelle gefunden haben, springen wir zur Ersten.
+        " Die nächste Zeile nur damit der openMode berücksichtigt wird.
+        call OpenFile($MYVIMRC, a:openMode)
         cfirst
     else
+        " Sonst zur services.yml
         let path = substitute(expand("%:p"), "Bundle.*", "Bundle/Resources/config/services.yml", "")
-        if filereadable(path)
-            call OpenFile(path, a:openMode)
-        endif
-        return
+        call OpenFile(path, a:openMode)
     endif
-
-    let path = expand("%:p")
-    let path = substitute(path, "Bundle.*", "Bundle/Resources/config/services.yml", "")
-    call OpenFile(path, openMode)
-
-    call search(fileNameWithoutEnding)
 endfunc
 
 func! InitQfList()
@@ -336,4 +332,86 @@ func! ExecuteUnitTest()
     "let command='Dispatch phpunit -c /home/steffen/Projekte/mediVerbund/medios/app/phpunit.xml --filter Quartal'
     exec command
 "normal <c-w>k
+endfunc
+
+func! SNIFindFunctionDefinition(funcName, openMode)
+    " Wir holen uns aus dem Tagfile die Pfade von Files mit der Funktion
+    " und (unter anderem) alle use-Pfade oder Type-Hint-Pfade,
+    " genauer alles was wie ..\..\.. aussieht, aber auch z.B.
+    " MEDIVertragBundle\..
+    let pathesWithTag = SNIGetPathesWithTag(a:funcName)
+    let possiblePathes = SNIGetStringsWithBackslash()
+
+    " Wegen z.B. MEDIVertragBundle nehmen wir alle Slashes raus
+    let normalizedPossiblePathes = []
+    for i in range(0, len(possiblePathes) - 1)
+        call add(normalizedPossiblePathes, SNIStripSlashes(possiblePathes[i]))
+    endfor
+
+    " Wir erstellen ein Result mit den Matches
+    let result = []
+    for pathWithTag in pathesWithTag
+        let fullNormalizedPath = SNIStripDotPhp(SNIStripSlashes(pathWithTag))
+        for normalizedPossiblePath in normalizedPossiblePathes
+            if match(fullNormalizedPath, normalizedPossiblePath) != -1 
+                call add(result, pathWithTag)
+            endif
+        endfor
+    endfor
+
+    if len(result) == 1
+        call OpenFile(GetBaseDir() . '/' . result[0], a:openMode)
+        silent call search(a:funcName)
+    endif
+    " TODO SNI
+    " - Wenn schon vor dem Filtern nur eine Fundstelle gefunden wird die nehmen.
+    " - Wird keine gefunden, einfach melden.
+    " - Wenn mehrere gefunden wurden zumindest ein normales :tselect machen,
+    "   obwohl es besser wäre eine Liste anzuzeigen.
+    "   - nmap <buffer> <cr> :call OpenFileInLine()<cr>
+endfunc
+
+func! SNIGetPathesWithTag(tagName)
+    let tagPath = SNIGetTagPath()
+    if tagPath == ''
+        echo 'Kein tag-File gefunden'
+        return
+    endif
+
+    let command = "awk '/^" . a:tagName . "\\W/ {print $2}' " . tagPath
+    let filePathesString = system(command)
+    return split(system(command), "\n")
+endfunc
+
+func! SNIStripSlashes(text)
+    let result = substitute(a:text, '\\', '', 'g')
+    return substitute(result, '/', '', 'g')
+endfunc
+
+func! SNIStripDotPhp(text)
+    return substitute(a:text, '.php$', '', '')
+endfunc
+
+func! SNIGetTagPath()
+    let path = GetBaseDir() . '/tags'
+    if filereadable(path)
+        return path
+    endif
+    return ''
+endfunc
+
+func! SNIGetStringsWithBackslash()
+    return SNIGetStringsWithPattern('\m\w\+\\[a-zA-Z0-9_\\]\+')
+endfunc
+
+func! SNIGetStringsWithPattern(pattern)
+    let startPos = getpos(".")
+    let hits = []
+
+    normal gg
+    let command='%s/' . a:pattern . '/\=len(add(hits, submatch(0))) ? submatch(0) : ""/ge'
+    silent execute command
+
+    call setpos('.', startPos)
+    return hits
 endfunc
