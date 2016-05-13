@@ -26,6 +26,10 @@ nmap <leader>fs :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "
 nmap <leader>fv :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 'v')"<cr>
 nmap <leader>ft :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 't')"<cr>
 
+func! GetSymfonyVersion()
+    return 2
+endfunc
+
 func! AddArgToConstructor(args)
     normal mz
     let parts = split(a:args)
@@ -36,7 +40,7 @@ func! AddArgToConstructor(args)
         let varName = a:args
         let className =""
     endif
-    let varName = substitute(varName, '\$\?', '$', '')
+    let varName = substitute(varName, '\$\?', '', '')
 
     " Erst sehen wir nach, wo die öffnende Klammer von construct ist
     :normal /__constructf(
@@ -51,13 +55,13 @@ func! AddArgToConstructor(args)
     endif
 
     if className == ""
-        exec "normal i" . varName
+        exec "normal i$" . varName
     else
-        exec "normal i" . className . ' ' . varName
+        exec "normal i" . className . ' $' . varName
     endif
 
     " Neue Variable am Ende von Construct einer protected Variablen übergeben
-    exec 'normal /{%O$this->' . varName . ' = ' . varName . ';'
+    exec 'normal /{%O$this->' . varName . ' = $' . varName . ';'
 
     :normal /__construct
     :normal ?^\s*$
@@ -68,7 +72,7 @@ func! AddArgToConstructor(args)
         normal j
     endif
 
-    exec 'normal Oprotected ' . varName . ';'
+    exec 'normal Oprotected $' . varName . ';'
     normal mu
 
     " Damit wir mit <ctrl-o> schnell zur letzten Stelle springen können gehen
@@ -129,6 +133,7 @@ func! OpenFile(path, openMode)
 
     if filereadable(a:path) == 1 || confirm('File '.a:path.' anlegen?', "n\ny") == 2
         exec(om . ' ' . a:path)
+        set cursorline
     endif
 endfunc
 
@@ -266,7 +271,11 @@ func! GetFilePathFromSymfonyString(str)
         if g:parts[0] == 'x'
             let g:filePath=GetBaseDir().'/app/Resources/views/'.g:parts[2]
         else
-            let g:filePath=GetBaseDir().'/src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Resources/views/'.g:parts[1].'/'.g:parts[2]
+            if match(g:parts[0], 'MEDI') >= 0
+                let g:filePath=GetBaseDir().'/src/MEDI/'.substitute(g:parts[0], "^xMEDI", "", "").'/Resources/views/'.g:parts[1].'/'.g:parts[2]
+            else
+                let g:filePath=GetBaseDir().'/src/'.substitute(g:parts[0], "^x", "", "").'/Resources/views/'.g:parts[1].'/'.g:parts[2]
+            endif
         endif
     endif
 
@@ -283,12 +292,16 @@ endfunc
 func! GetServiceDefinitionUnderCursor()
     " Strings mit 'Bundle' oder Leerzeichen sind keine Service-Definitionen
     let string = GetQuotedString()
-    if match(string, '@Bundle') >= 0 || match(string, ' ') >= 0
+    if string == '' || match(string, '@Bundle') >= 0 || match(string, ' ') >= 0
         return ''
     endif
 
     " Ein container:debug, aber Antwort ohne Farben. Funktioniert auch für private Services.
-    let command = "php ".GetBaseDir()."/app/console container:debug ".string.' | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g"'
+    if GetSymfonyVersion() == 2
+        let command = "php ".GetBaseDir()."/app/console container:debug ".string.' | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g"'
+    else
+        let command = "php ".GetBaseDir()."/bin/console debug:container ".string.' | sed -r "s/\x1B\[([0-9]{1,3}((;[0-9]{1,3})*)?)?[m|K]//g"'
+    endif
     let logicalPath=system(command)
     let logicalPath=substitute(logicalPath, '.*Class\s*', '', 'v')
     let logicalPath=substitute(logicalPath, "\n.*", '', 'v')
@@ -389,7 +402,7 @@ func! SNIGetPathesWithTag(tagName)
         return
     endif
 
-    let command = "awk '/^" . a:tagName . "\\W/ {print $2}' " . tagPath
+    let command = "awk '/^" . a:tagName . "/ {print $2}' " . tagPath
     let filePathesString = system(command)
     return split(system(command), "\n")
 endfunc
