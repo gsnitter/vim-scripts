@@ -6,6 +6,7 @@
 "       Da wäre fast ein Mapping besser, um zur function-Zeile springt
 "     - GetBaseDir cachen
 "     - Bei dispatch.vim ca. in Zeile 850 'normal G' einfügen
+:command! -nargs=? PT call SNIPhpUnitToggler()
 nmap <leader>se :call ToggleSymfonyView('edit')<cr>
 nmap <leader>ss :call ToggleSymfonyView('sp')<cr>
 nmap <leader>sv :call ToggleSymfonyView('vs')<cr>
@@ -469,4 +470,88 @@ func! SNIFindFunctionDefinition(funcName, openMode)
         call OpenFile(expand('%:p'), a:openMode)
         exec('tselect ' . a:funcName)
     endif
+endfunc
+
+" Wollen bequem zwischen Test- und Original-File toggeln können 
+func! SNIPhpUnitToggler()
+    let testDir = SNIFindTestDir()
+    if testDir == ''
+        echo "Kein Test-Dir gefunden"
+        return
+    endif
+
+    if match(SNIGetCurrentDir(), testDir) != -1 
+        " Wir sind im Test-File
+        silent only
+        let originalFilePath = substitute(expand("%:p"), 'Test.php', '.php', '')
+        for testDirName in ['test', 'tests', 'Test', 'Tests']
+            let originalFilePath = substitute(originalFilePath, '/' . testDirName . '/', '/', '')
+        endfor
+        if filereadable(originalFilePath)
+            exec ":split " . originalFilePath
+            exe "normal \<c-w>J"
+        else
+            echo "File " . originalFilePath . " konnte nicht geöffnet werden."
+        endif
+    else
+        " Wir sind im original-File
+        let beforeTestDir = substitute(testDir, "/[^/]*$", "", "")
+        let restPath = substitute(expand("%:p"), beforeTestDir, '', '')
+        let testPath = substitute(testDir . restPath, '.php$', 'Test.php', '')
+
+        " Schon mal den richtigen Pfad öffnen
+        only
+        split
+        execute "edit " . testPath
+
+        " Wenn das Test-File noch nicht existiert hat, schreiben wir was rein
+        if (glob(testPath) == '')
+            let namespace = substitute(testPath, '^.*/\(.\{-}\/.\{-}Bundle\)', '\1', '')
+            let namespace = substitute(namespace, '.php$', '', '')
+
+            let g:puOriginalFileUsageStatement = 'use ' . namespace
+            let g:puOriginalFileNamespaceStatement = 'namespace ' . substitute(namespace, 'Bundle/', 'Bundle/Tests/', '') 
+            let g:puOriginalFileNamespaceStatement = substitute(g:puOriginalFileNamespaceStatement, '\(.*\)/.*', '\1', '')
+            let g:puOriginalFileUsageStatement = substitute(g:puOriginalFileUsageStatement, '/', '\\\', 'g')
+            let g:puOriginalFileNamespaceStatement = substitute(g:puOriginalFileNamespaceStatement, '/', '\\\', 'g')
+
+            exec "normal iphpunittest1\<c-j>"
+        endif
+    endif
+endfunc
+
+" Vom BaseDir bis zum aktuellen Directory laufen wir alle Pfade durch
+" und suchen nach Directories mit Namen .../test, .../Test, etc.
+" Wenn nichts gefunden wird geben wir '' zurück.
+func! SNIFindTestDir()
+    let currentDir = SNIGetCurrentDir()
+    let baseDir = GetBaseDir()
+    if baseDir == ''
+        return ''
+    endif
+
+    let subDirsString = substitute(currentDir, baseDir, "", "")
+    let subDirs = split(subDirsString, '/')
+    let loopDir = baseDir
+
+    for subDir in subDirs
+        for testDirName in ['test', 'tests', 'Test', 'Tests']
+            let dirToCheck = loopDir . '/' . testDirName
+            if SNIIsDir(dirToCheck)
+                return dirToCheck
+            endif
+        endfor
+        let loopDir .= '/' . subDir
+    endfor
+endfunc
+
+func! SNIGetCurrentDir()
+    let path = expand("%:p")
+    let currentDir = substitute(path, "/[^/]*$", "", "")
+
+    return currentDir
+endfunc
+
+func! SNIIsDir(path)
+    return (filewritable(a:path) == 2)
 endfunc
