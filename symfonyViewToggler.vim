@@ -497,6 +497,8 @@ func! SNIPhpUnitToggler()
         " Wir sind im Test-File
         silent only
         let originalFilePath = substitute(expand("%:p"), 'Test.php', '.php', '')
+        let originalFilePath = substitute(originalFilePath, 'AppBundle', 'src/AppBundle', '')
+
         for testDirName in ['test', 'tests', 'Test', 'Tests']
             let originalFilePath = substitute(originalFilePath, '/' . testDirName . '/', '/', '')
         endfor
@@ -511,6 +513,8 @@ func! SNIPhpUnitToggler()
         let beforeTestDir = substitute(testDir, "/[^/]*$", "", "")
         let restPath = substitute(expand("%:p"), beforeTestDir, '', '')
         let testPath = substitute(testDir . restPath, '.php$', 'Test.php', '')
+        " Ist zumindest im Arztportal so gemacht
+        let testPath = substitute(testPath, 'tests/src', 'tests', '')
 
         " Schon mal den richtigen Pfad öffnen
         only
