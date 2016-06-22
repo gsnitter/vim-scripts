@@ -232,12 +232,12 @@ func! GetPathUnderCursor()
     let startPos = getpos(".")
     normal 0f:
     " Erstes Zeichen rückwärts suchen, dass kein \w oder : ist.
-    call search('[^a-zA-Z0-9:\.]', 'b')
+    call search('[^a-zA-Z0-9_:\.]', 'b')
     normal l
     " Position merken
     normal v
     " Letztes Zeichen suchen, dass kein \w oder : ist.
-    call search('[^a-zA-Z0-9:\.]')
+    call search('[^a-zA-Z0-9_:\.]')
     normal h
     exe 'normal "yy'
     " Jetzt zurück zum Start
