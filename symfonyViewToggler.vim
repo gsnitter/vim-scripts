@@ -27,7 +27,8 @@ nmap <leader>fv :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "
 nmap <leader>ft :exe ":call SNIFindFunctionDefinition('" . expand("<cword>") . "', 't')"<cr>
 
 func! GetSymfonyVersion()
-    return 2
+    " TODO SNI
+    return 3
 endfunc
 
 func! AddArgToConstructor(args)
@@ -210,6 +211,7 @@ func! GetFilePathForRepositoryLine()
         echo l:path
         return
     endif
+    return ''
 endfunc
 
 func! GoToFunctionDefinition()
@@ -265,6 +267,10 @@ func! GetQuotedString()
 endfunc
 
 func! GetFilePathFromSymfonyString(str)
+    if match(a:str, '::class') != -1
+        return ''
+    endif
+
     let g:parts=split('x'.a:str, ':')
     let g:filePath = ''
     if len(g:parts) == 3
@@ -305,6 +311,7 @@ func! GetServiceDefinitionUnderCursor()
     let logicalPath=system(command)
     let logicalPath=substitute(logicalPath, '.*Class\s*', '', 'v')
     let logicalPath=substitute(logicalPath, "\n.*", '', 'v')
+    let logicalPath=Trim(logicalPath)
 
     return TranslateLogicalFilePath(logicalPath)
 endfunc
@@ -313,10 +320,11 @@ func! TranslateLogicalFilePath(logicalPath)
     let fileName=substitute(a:logicalPath, '.*\\', '', '')
     let command = 'find ' . GetBaseDir() . ' -name ' . Trim(fileName) . '*'
     let filePathes=split(system(command), "\n")
+    let g:d = filePathes
     for filePath in filePathes
         let a = substitute(filePath, '/', '', 'g')
         let b = substitute(a:logicalPath, '\\', '', 'g')
-        if match(a, b)
+        if match(a, b) != -1
             return filePath
         endif
     endfor
@@ -329,6 +337,7 @@ endfunction
 
 func! Grep(search)
     " grep -r -e 'some pattern' path/* funkttioniert, aber ohne 'Progress'
+    " j sagt: Nicht gleich hinspringen
     let command='vimgrep /\c' . a:search . '/j ' . GetBaseDir() . '/src/**/*.php'
     exec command
     let command='vimgrepadd /\c' . a:search . '/j ' . GetBaseDir() . '/src/**/*.feature'
@@ -380,7 +389,7 @@ endfunc
 
 autocmd! BufEnter *Test.php call InitTestMapping()
 func! InitTestMapping()
-    if match(expand('%'), 'Test.php')
+    if match(expand('%'), 'Test.php') != -1
         :nmap <buffer> <leader>p :call ExecuteUnitTest()<cr>
     endif
 endfunc
