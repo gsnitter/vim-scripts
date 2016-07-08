@@ -524,6 +524,7 @@ func! SNIPhpUnitToggler()
         let testPath = substitute(testDir . restPath, '.php$', 'Test.php', '')
         " Ist zumindest im Arztportal so gemacht
         let testPath = substitute(testPath, 'tests/src', 'tests', '')
+        let originalFilePath = expand("%:p")
 
         " Schon mal den richtigen Pfad öffnen
         only
@@ -532,8 +533,11 @@ func! SNIPhpUnitToggler()
 
         " Wenn das Test-File noch nicht existiert hat, schreiben wir was rein
         if (glob(testPath) == '')
-            let namespace = substitute(testPath, '^.*/\(.\{-}\/.\{-}Bundle\)', '\1', '')
+            " Bei MEDIos nehmen wir alles bis eins vor dem XXXBundle heraus, 
+            " beim Arztportal wäre das src, was wir ebenfalls entfernen
+            let namespace = substitute(originalFilePath, '^.*/\(.\{-}\/.\{-}Bundle\)', '\1', '')
             let namespace = substitute(namespace, '.php$', '', '')
+            let namespace = substitute(namespace, 'src/', '', '')
 
             let g:puOriginalFileUsageStatement = 'use ' . namespace
             let g:puOriginalFileNamespaceStatement = 'namespace ' . substitute(namespace, 'Bundle/', 'Bundle/Tests/', '') 
