@@ -1,3 +1,5 @@
+" Hiermit wird das tags-File beim jeden Speichern aktualisiert.
+"
 " Ab besten folgendes in ~/.ctags
 " --exclude=app/cache/*
 " --exclude=app/logs/*
@@ -40,4 +42,3 @@ if exists('g:loaded_sni_ctags')
 endif
 let g:loaded_sni_ctags = 1
 autocmd BufWritePost *.php,*.js,*.twig call UpdateTags()
-
